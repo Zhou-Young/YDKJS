@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Summernote</title>
+<link href="/flzhgl/web/css/bootstrap.css" rel="stylesheet">
+<script src="/flzhgl/web/js/jquery.js"></script>
+<script src="/flzhgl/web/js/jcsj/bootstrapforsummernote.js"></script>
+
+<link href="/flzhgl/web/css/summernote/summernote.css" rel="stylesheet">
+<script src="/flzhgl/web/js/jcsj/summernote.js"></script>
+
+
+</head>
+<style>
+	html{
+		box-sizing: border-box;
+	}
+	body {
+		width: 60%;
+		margin: 0 auto;
+		box-sizing: border-box;
+	}
+	#title {
+		display: inline-block;
+    height: 40px;
+    line-height: 40px;
+    box-sizing: border-box;
+    padding-left: 16px;
+    border: none;
+    background-color: #efefef;
+    color: #4f4f4f;
+		margin: 20px 0;
+	}
+	.content{
+		overflow: hidden;
+	}
+	#summernote{
+		box-sizing: border-box;
+		width: 50%;
+		float: left;
+		height: 600px;
+		position: relative;
+		/* border: solid 1px #eeeeee; */
+		background-color: #fbf9f1;
+	}
+	#summernote .sub {
+		text-align: center;
+		color: #349EDF;
+		background-color: transparent;
+		border: none;
+		width: 100%;
+		position: absolute;
+		bottom: 0;
+		line-height: 40px;
+		height: 40px;
+	}
+	.summernote{
+		padding: 20px;
+	}
+
+	.preView{
+		box-sizing: border-box;
+		width: 50%;
+		float: right;
+		height: 600px;
+		border: solid 1px #eeeeee;
+		padding: 20px;
+	}
+</style>
+<body>
+	<div class="title">
+			<input style="width: 100%;" type="text" id="title" name="title" placeholder="新闻标题"></input>
+	</div>
+	<div class="content">
+			<div id="summernote">
+				<div class="summernote">
+					<p>Hello Summernote</p>
+				</div>
+				<input class="sub" type="button" value="提交" onclick="checkForm()">
+			</div>
+			<div class="preView">
+					<h1>下面是预览部分</h1>
+					<p id="preView">这是段落。</p>
+			</div>
+	</div>
+</body>
+</html>
+
+
+<script type="text/javascript">
+	//如果有id传进来，则相当于修改
+	var newsId = GetQueryString("newsId");
+	if (newsId != null) {
+		//获取id对应news的html
+		$.ajax({
+			data: {
+				newsId: newsId
+			},
+			type: "POST",
+			url: "/flzhgl/jcsj/getNews",
+			dataType: "json",
+			async: true,
+			contentType: "application/x-www-form-urlencoded;charset=UTF-8",
+			// 成功时调用方法，后端返回json数据
+			success: function(resJson) {
+				//返回里面包含id
+				//将富文本编辑框填充
+				$("#summernote").summernote("code", resJson.html);
+				$("#title").val(resJson.title);
+				//修改预览框内容
+				$("#preView").html(resJson.html);
+			}
+		});
+	}
+
+	// 得到url参数
+	function GetQueryString(name) {
+		var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+		var r = window.location.search.substr(1).match(reg); // search,查询？后面的参数，并匹配正则
+		if (r != null) return unescape(r[2]);
+		return null;
+	}
+
+	function checkForm() {
+		//得到富文本的html
+		var qxHtml = $("#summernote").summernote("code");
+		//预览部分
+		$("#preView").html(qxHtml);
+		var newsId = GetQueryString("newsId");
+		var title = $("#title").val();
+		//提交给后台保存
+		$.ajax({
+			data: {
+				qxHtml: qxHtml,
+				newsId: newsId,
+				title: title
+			},
+			type: "POST",
+			url: "/flzhgl/jcsj/saveNews",
+			dataType: "json",
+			async: true,
+			contentType: "application/x-www-form-urlencoded;charset=UTF-8",
+			// 成功时调用方法，后端返回json数据
+			success: function(resJson) {
+				//返回里面包含newsId
+				alert("保存成功");
+				window.location.href =
+					"/flzhgl/web/pages/jcsj/editNews.html?newsId=" + resJson.newsId;
+			}
+		});
+	}
+	//调用富文本编辑
+	$(document).ready(function() {
+		var $summernote = $("#summernote").summernote({
+			height: 300,
+			minHeight: null,
+			maxHeight: null,
+			focus: true,
+			//调用图片上传
+			callbacks: {
+				// onImageUpload的参数为files，summernote支持选择多张图片
+				onImageUpload: function(files) {
+					var $files = $(files);
+					// 通过each方法遍历每一个file
+					$files.each(function() {
+						var file = this;
+						// FormData，新的form表单封装，具体可百度，但其实用法很简单，如下
+						var data = new FormData();
+						// 将文件加入到file中，后端可获得到参数名为“file”
+						data.append("file", file);
+						// ajax上传
+						$.ajax({
+							data: data,
+							type: "POST",
+							url: "/flzhgl/jcsj/uploadImg",
+							// div上的action
+							cache: false,
+							contentType: false,
+							processData: false,
+							// 成功时调用方法，后端返回json数据
+							success: function(resJson) {
+								imgURL =
+									"https://ss0.bdstatic.com/70cFuHSh_Q1YnxGkpoWK1HF6hhy/it/u=1754917012,3637926208&fm=200&gp=0.jpg";
+								imgURL = resJson.url;
+								// 插入到summernote
+								$("#summernote").summernote("insertImage", imgURL, function(
+									$image
+								) {
+									// todo，后续可以对image对象增加新的css式样等等，这里默认
+								});
+							}
+						});
+					});
+				}
+			}
+		});
+	});
+</script>
+
