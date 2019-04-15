@@ -99,9 +99,9 @@ function foo(something) {
   return this.a + something;
 }
 
-Function.prototype.yBind = function(obj) {
+Function.prototype.yBind = function (obj) {
   const fn = this;
-  return function() {
+  return function () {
     return fn.apply(obj, arguments);
   };
 };
@@ -121,3 +121,4 @@ var bar = foo.yBind(obj);
 
 var b = bar(3); // 2 3
 console.log(b); // 5
+

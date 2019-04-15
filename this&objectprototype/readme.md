@@ -192,5 +192,124 @@ bar(); // "oops, global"
 
 与这四种绑定规则不同，ES6 的箭头方法使用词法作用域来决定 this 绑定，这意味着它们采用封闭他们的函数调用作为 this 绑定（无论它是什么）。它们实质上是 ES6 之前的 self = this 代码的语法替代品。
 
-
 ## 对象
+
+### 万物不一定都是对象
+
+简单基本类型 （string、number、boolean、null、和 undefined）自身 不是 object
+
+更简单的字面形式几乎是所有人的首选。仅仅在你需要使用额外的选项时使用构建形式
+
+### 属性描述符
+
+- **可写性（writable）**：是否可以改变属性值
+- **可配置性（configurable）**：属性是否可配置
+  - configurable:false  会组织delete删除属性（delete只删除自身属性，不找原型链）
+- **可枚举性（enumerable）**：是否能在for..in中循环
+- **不可变性（immutability）**：属性或对象不可变，浅不可变
+
+**对象常量**：writable:false 与 configurable:false
+
+**防止扩展（Prevent Extensions）**：防止一个对象被添加新的属性，但另一方面保留其他既存的对象属性，可以调用 Object.preventExtensions(..)：
+
+**封印（seal）**：Object.seal(..) 相当于在当前的对象上调用 Object.preventExtensions(..)，同时也将它所有的既存属性标记为 configurable:false
+
+**冻结（freeze）**：Object.freeze(..) 相当于在当前的对象上调用 Object.seal(..)，同时也将它所有的“数据访问”属性设置为 writable:false，所以它们的值不可改变。
+
+**[\[GET]]**：检查对象是否含有某个属性（会沿原型链寻找
+
+**[\[PUT]]**：如果属性存在，[\[Put]] 算法将会大致检查：
+
+- 这个属性是访问器描述符吗（见下一节"Getters 与 Setters"）？如果是，而且是 setter，就调用 setter。
+- 这个属性是 writable 为 false 数据描述符吗？如果是，在非 strict mode 下无声地失败，或者在 strict mode 下抛出 TypeError。
+- 否则，像平常一样设置既存属性的值。
+- 
+如果属性在当前的对象中还不存在，[\[Put]] 操作会变得更微妙和复杂。
+
+**get/set**:
+
+```javascript
+var myObject = {
+  // 为 `a` 定义 getter
+  get a() {
+  return this._a_;
+  },
+
+  // 为 `a` 定义 setter
+  set a(val) {
+    this._a_ = val * 2;
+  }
+};
+
+myObject.a = 2;
+
+myObject.a; // 4
+```
+
+**存在性（existence）**:
+
+```javascript
+var myObject = {
+	a: 2
+};
+
+("a" in myObject);				// true
+("b" in myObject);				// false
+
+myObject.hasOwnProperty( "a" );	// true
+myObject.hasOwnProperty( "b" );	// false
+```
+
+in 操作符会检查**属性**是否存在于对象 中，或者是否存在于 [\[Prototype]] 链对象遍历的更高层中（详见第五章）。相比之下，hasOwnProperty(..) 仅仅 检查 myObject 是否拥有属性，但 不会 查询 [\[Prototype]] 链
+
+**迭代（iteration）**：
+
+for...in迭代属性 for...of迭代值
+
+```javascript
+var myObject = {
+  a: 2,
+  b: 3
+};
+
+Object.defineProperty(myObject, Symbol.iterator, {
+  enumerable: false,
+  writable: false,
+  configurable: true,
+  value: function () {
+    var o = this;
+    var idx = 0;
+    var ks = Object.keys(o);
+    return {
+      next: function () {
+        return {
+          value: o[ks[idx++]],
+          done: (idx > ks.length)
+        };
+      }
+    };
+  }
+});
+
+// 手动迭代 `myObject`
+var it = myObject[Symbol.iterator]();
+it.next(); // { value:2, done:false }
+it.next(); // { value:3, done:false }
+it.next(); // { value:undefined, done:true }
+
+// 用 `for..of` 迭代 `myObject`
+for (var v of myObject) {
+  console.log(v);
+}
+// 2
+// 3
+```
+
+foreach()会迭代所有值，不可跳出循环
+every() 和 some() 会跳出
+
+迭代对象属性的顺序不确定
+
+但 @@iterator 本身 不是迭代器对象， 而是一个返回迭代器对象的 **方法**
+
+## 类
